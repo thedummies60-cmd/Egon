@@ -98,12 +98,6 @@
 
   const AO_LEVELS = [Math.round(255 * 0.46), Math.round(255 * 0.68), Math.round(255 * 0.85), 255];
 
-  function pushVertex(s, x, y, z, u, v, sky, blk, ao, wave, tr, tg, tb) {
-    const q = s.quads * 4 * STRIDE;   // byte offset of this quad's vertices
-    // caller tracks which of the 4 vertices via `vi`
-    return q;
-  }
-
   /* ============================================================
    * Mesher
    * ============================================================ */
@@ -259,6 +253,7 @@
   const tmpLights = new Uint32Array(4);
   const tmpAO = new Uint8Array(4);
   const tmpTint = new Uint8Array(3);
+  const overlayTint = new Uint8Array(3);
 
   Mesher.prototype.tintFor = function (id, x, z, face) {
     const blk = B.list[id];
@@ -291,14 +286,13 @@
       const flip = (tmpAO[0] + tmpAO[2]) < (tmpAO[1] + tmpAO[3]);
       writeQuad(solidScratch, x, y, z, f, FACE_UV[id * 6 + f], tmpLights, tmpAO, tint, 0, flip);
 
-      // grass fringe on the four sides
+      // grass fringe on the four sides, always tinted like the top face
       if (overlayUV && f !== 2 && f !== 3) {
-        const gt = this.tintFor(id, x, z, 2);
-        const saveTint = [gt[0], gt[1], gt[2]];
-        const ci = z * CX + x;
-        const col = this.grassCol[ci];
-        saveTint[0] = (col >> 16) & 255; saveTint[1] = (col >> 8) & 255; saveTint[2] = col & 255;
-        writeOverlay(x, y, z, f, overlayUV, tmpLights, tmpAO, saveTint);
+        const col = this.grassCol[z * CX + x];
+        overlayTint[0] = (col >> 16) & 255;
+        overlayTint[1] = (col >> 8) & 255;
+        overlayTint[2] = col & 255;
+        writeOverlay(x, y, z, f, overlayUV, tmpLights, tmpAO, overlayTint);
       }
     }
   };

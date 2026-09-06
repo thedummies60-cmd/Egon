@@ -9,7 +9,7 @@
   const P = MC.paint;
   const shade = P.shade, mix = P.mix;
 
-  const TEXW = 64, TEXH = 64;      // one skin per mob
+  const TEXW = 128, TEXH = 128;    // one skin per mob, UVs packed automatically
   const MOBS = {};
   MC.mobArt = { MOBS: MOBS, TEXW: TEXW, TEXH: TEXH };
 
@@ -30,9 +30,19 @@
     };
   }
 
-  // MC-style box unwrap: [-X, +X, top, bottom, front(+Z... we use -Z), back]
+  // Texture dimensions are whole texels even when the geometry is not.
+  function texDims(part) {
+    return [
+      Math.max(1, Math.round(part.size[0])),
+      Math.max(1, Math.round(part.size[1])),
+      Math.max(1, Math.round(part.size[2]))
+    ];
+  }
+
+  // MC-style box unwrap: [-X, +X, top, bottom, front(-Z), back]
   function uvRects(part) {
-    const w = part.size[0], h = part.size[1], d = part.size[2];
+    const t = texDims(part);
+    const w = t[0], h = t[1], d = t[2];
     const u = part.uv[0], v = part.uv[1];
     return {
       xn: [u, v + d, d, h],
@@ -351,7 +361,6 @@
         for (let j = h - 2; j < h; j++) for (let i = 1; i < w - 1; i++) cv.set(x + i, y + j, 0xf0f0f0);
       });
       s.eyes('head', 0x1a1a1a, 0xffffff, 1, 1);
-      s.set = null;
       s.fillPart('legFL', 0xc8c8c8); s.fillPart('legFR', 0xc8c8c8);
       s.fillPart('legBL', 0xc8c8c8); s.fillPart('legBR', 0xc8c8c8);
     }
@@ -590,6 +599,29 @@
     }
   });
 
+  /* ------------------------------------------------------------------
+   * Hand-placed UV offsets are easy to get wrong: a box unwraps to
+   * 2*(w+d) by (h+d) texels, which overflows the skin as soon as a part
+   * gets big. So every part is packed automatically instead.
+   * ------------------------------------------------------------------ */
+  function packModel(model, width, height) {
+    const boxes = model.map(function (p, i) {
+      const t = texDims(p);
+      return { part: p, i: i, w: 2 * (t[0] + t[2]) + 1, h: t[1] + t[2] + 1 };
+    });
+    boxes.sort(function (a, b) { return b.h - a.h || b.w - a.w; });
+    let x = 0, y = 0, shelf = 0;
+    for (let i = 0; i < boxes.length; i++) {
+      const b = boxes[i];
+      if (x + b.w > width) { x = 0; y += shelf; shelf = 0; }
+      if (y + b.h > height) return false;
+      b.part.uv = [x, y];
+      x += b.w;
+      if (b.h > shelf) shelf = b.h;
+    }
+    return true;
+  }
+
   /* ============================================================
    * bake all the skins into one atlas
    * ============================================================ */
@@ -603,6 +635,9 @@
 
     for (let i = 0; i < names.length; i++) {
       const name = names[i], m = MOBS[name];
+      if (!packModel(m.model, TEXW, TEXH)) {
+        console.warn('mob skin too small for', name);
+      }
       const c = new MC.paint.Canvas(TEXW, MC.hashSeed('mob:' + name));
       const skin = new Skin(c, m.model);
       try { m.tex(c, skin); }

@@ -268,6 +268,12 @@
     const aspect = this.canvas.width / this.canvas.height;
     mat4.perspective(_handProj, 70 * M.DEG, aspect, 0.02, 8);
     const handOpts = { alphaTest: 0.5, fogAmount: 0, vp: _handProj };
+    // Anchor the hand to the bottom-right of the frustum rather than to fixed
+    // view-space coordinates, so it sits the same way at any aspect ratio.
+    const HZ = 0.86;
+    const halfH = HZ * Math.tan(35 * M.DEG);
+    const halfW = halfH * aspect;
+    const hx = halfW * 0.72, hy = -halfH * 0.66;
 
     const sw = p.swinging ? p.swingTime : 1;
     const sq = Math.sqrt(Math.min(1, sw));
@@ -283,11 +289,11 @@
     mat4.identity(hand);
 
     if (t && t.isBlock && t.block.render !== 'cross') {
-      mat4.translate(hand, hand, 0.44 + swingX * 0.55 + bobX, -0.42 + swingY * 0.6 - bobY, -0.86 + swingZ * 0.5);
+      mat4.translate(hand, hand, hx + swingX * 0.5 + bobX, hy + swingY * 0.55 - bobY, -HZ + swingZ * 0.45);
       mat4.rotateY(hand, hand, -0.62);
       mat4.rotateX(hand, hand, 0.2 + swingRot * 0.5);
       mat4.rotateZ(hand, hand, 0.06);
-      batch.box(hand, 0.34, 0.34, 0.34, cubeUV(t.block), blockTint(this, t.block, _tintCol), true);
+      batch.box(hand, 0.25, 0.25, 0.25, cubeUV(t.block), blockTint(this, t.block, _tintCol), true);
       r.flushBatch(batch, r.texBlocks, handOpts);
       return;
     }
@@ -300,12 +306,12 @@
     const tex = t && t.isBlock ? r.texBlocks : r.texItems;
 
     if (uv) {
-      mat4.translate(hand, hand, 0.42 + swingX * 0.55 + bobX, -0.38 + swingY * 0.6 - bobY, -0.82 + swingZ * 0.5);
+      mat4.translate(hand, hand, hx + swingX * 0.5 + bobX, hy + 0.04 + swingY * 0.55 - bobY, -HZ + swingZ * 0.45);
       mat4.rotateY(hand, hand, -0.62);
       mat4.rotateZ(hand, hand, -0.32 - swingRot * 0.5);
       mat4.rotateX(hand, hand, swingRot * 0.4);
       mat4.copy(_m, hand);
-      const s = 0.3;
+      const s = 0.22;
       const P = new Float32Array(12);
       const corners = [[-s, -s], [s, -s], [s, s], [-s, s]];
       for (let k = 0; k < 4; k++) {
@@ -324,11 +330,11 @@
     if (!art.parts) return;
     const armEntry = art.parts.filter(function (e) { return e.part.name === 'armR'; })[0];
     if (!armEntry) return;
-    mat4.translate(hand, hand, 0.44 + swingX * 0.6 + bobX, -0.52 + swingY * 0.6 - bobY, -0.72 + swingZ * 0.5);
+    mat4.translate(hand, hand, hx * 0.94 + swingX * 0.55 + bobX, hy - 0.06 + swingY * 0.55 - bobY, -HZ * 0.9 + swingZ * 0.45);
     mat4.rotateY(hand, hand, -0.35);
     mat4.rotateZ(hand, hand, -0.26);
     mat4.rotateX(hand, hand, 0.5 + swingRot);
-    mat4.scaleM(hand, hand, 1 / 26, 1 / 26, 1 / 26);
+    mat4.scaleM(hand, hand, 1 / 34, 1 / 34, 1 / 34);
     const sz = armEntry.part.size;
     mat4.translate(hand, hand, 0, -sz[1] / 2, 0);
     batch.box(hand, sz[0], sz[1], sz[2], armEntry.uv, WHITE, true);

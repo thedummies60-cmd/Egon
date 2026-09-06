@@ -264,6 +264,7 @@
   };
 
   UI.prototype.pause = function () {
+    if (this.game.panorama) return;
     if (this.game.player && this.game.player.dead) return;
     this.game.paused = true;
     this.game.input.exitLock();

@@ -42,7 +42,7 @@
     /* --- key routing that must bypass the movement handler --- */
     let lastSpace = 0;
     game.input.onKey = function (code, e) {
-      if (!game.running) {
+      if (!game.running || game.panorama) {
         if (code === 'Escape' && ui.current && ui.current !== 'screen-title') {
           ui.show('screen-title');
           return true;
@@ -79,7 +79,7 @@
     };
 
     game.input.onMouseDown = function (button, e) {
-      if (!game.running) return false;
+      if (!game.running || game.panorama) return false;
       if (game.screen) return false;            // container UI handles its own clicks
       if (game.paused) return false;
       if (!game.input.locked && !game.player.dead) {
@@ -92,14 +92,17 @@
 
     game.input.onWheel = function () { return !!game.screen || game.paused; };
 
+    // Losing pointer lock means the player alt-tabbed or hit Esc, so pause.
+    // The title-screen panorama never holds lock, so it must not trigger this.
     game.input.onLockChange = function (locked) {
-      if (!locked && game.running && !game.paused && !game.screen && !game.player.dead) {
+      if (!locked && game.running && !game.panorama && !game.paused &&
+          !game.screen && !game.player.dead) {
         ui.pause();
       }
     };
 
     document.addEventListener('visibilitychange', function () {
-      if (document.hidden && game.running && !game.paused && !game.screen) ui.pause();
+      if (document.hidden && game.running && !game.panorama && !game.paused && !game.screen) ui.pause();
     });
 
     /* --- title screen with a live world behind it --- */

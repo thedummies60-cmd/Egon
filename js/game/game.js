@@ -636,7 +636,6 @@
       const def = B.byName[placeName];
       if (def.collide) {
         // don't wall yourself in
-        if (PH.boxBlocked === undefined) { /* no-op */ }
         const overlapX = p.x + 0.3 > px && p.x - 0.3 < px + 1;
         const overlapZ = p.z + 0.3 > pz && p.z - 0.3 < pz + 1;
         const overlapY = p.y + p.h > py && p.y < py + 1;
@@ -899,7 +898,7 @@
       if (t.burn <= 0 && canOutput && t.fuel) {
         const f = MC.recipes.fuel(t.fuel.name);
         if (f > 0) {
-          t.burnMax = f / 200;
+          t.burnMax = f / 20;          // fuel values are in ticks (20 per second)
           t.burn = t.burnMax;
           t.fuel.count--;
           if (t.fuel.count <= 0) t.fuel = t.fuel.name === 'lava_bucket' ? MC.stack('bucket', 1) : null;
