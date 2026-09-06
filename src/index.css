@@ -1,1 +1,165 @@
 @import "tailwindcss";
+
+:root {
+  --slot: 44px;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: "VT323", monospace;
+  user-select: none;
+}
+
+.font-display { font-family: "Press Start 2P", monospace; }
+.font-body { font-family: "VT323", monospace; }
+
+.pixelated { image-rendering: pixelated; }
+
+.text-mc { text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6); }
+.text-mc-hard { text-shadow: 3px 3px 0 #3f3f3f; }
+
+/* ---------- Minecraft buttons ---------- */
+.mc-btn {
+  font-family: "VT323", monospace;
+  font-size: 22px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 2px 2px 0 #383838;
+  background: linear-gradient(#8d8d8d, #7a7a7a);
+  border: 2px solid #000;
+  box-shadow: inset 2px 2px 0 #b8b8b8, inset -2px -2px 0 #565656;
+  padding: 10px 14px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: filter 0.08s, transform 0.05s;
+}
+.mc-btn:hover:not(:disabled) {
+  filter: brightness(1.18);
+  box-shadow: inset 2px 2px 0 #d6d6d6, inset -2px -2px 0 #5e5e5e, 0 0 0 2px rgba(255, 255, 255, 0.85);
+  color: #ffffa0;
+}
+.mc-btn:active:not(:disabled) { transform: translateY(2px); }
+.mc-btn:disabled {
+  color: #9c9c9c;
+  background: #585858;
+  box-shadow: inset 2px 2px 0 #6b6b6b, inset -2px -2px 0 #464646;
+  cursor: not-allowed;
+}
+.mc-btn-green { background: linear-gradient(#6fae4a, #5d963c); box-shadow: inset 2px 2px 0 #93cf6b, inset -2px -2px 0 #41702a; }
+.mc-btn-red { background: linear-gradient(#b05252, #96403f); box-shadow: inset 2px 2px 0 #d07b76, inset -2px -2px 0 #6e2c2b; }
+
+/* ---------- Inventory chrome ---------- */
+.mc-panel {
+  background: #c6c6c6;
+  border: 3px solid;
+  border-color: #ffffff #555555 #555555 #ffffff;
+  outline: 3px solid #141414;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.mc-slot {
+  width: var(--slot);
+  height: var(--slot);
+  background: #8b8b8b;
+  box-shadow: inset 2px 2px 0 #373737, inset -2px -2px 0 #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  flex: none;
+}
+.mc-slot:hover { box-shadow: inset 2px 2px 0 #373737, inset -2px -2px 0 #ffffff, inset 0 0 0 2px rgba(255, 255, 255, 0.9); }
+.mc-slot img { width: 32px; height: 32px; pointer-events: none; }
+.mc-slot .count {
+  position: absolute;
+  right: 1px;
+  bottom: -2px;
+  font-size: 17px;
+  color: #fff;
+  text-shadow: 2px 2px 0 #1c1c1c;
+  pointer-events: none;
+}
+
+.hotbar-slot {
+  width: 48px;
+  height: 48px;
+  background: rgba(20, 20, 20, 0.62);
+  border: 2px solid #0d0d0d;
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  flex: none;
+}
+.hotbar-slot img { width: 34px; height: 34px; pointer-events: none; }
+.hotbar-slot .count {
+  position: absolute;
+  right: 2px;
+  bottom: 0px;
+  font-size: 18px;
+  color: #fff;
+  text-shadow: 2px 2px 0 #1c1c1c;
+  pointer-events: none;
+}
+.hotbar-sel {
+  outline: 3px solid #fff;
+  outline-offset: 1px;
+  transform: scale(1.12);
+  z-index: 5;
+  background: rgba(60, 60, 60, 0.72);
+}
+
+.mc-input {
+  font-family: "VT323", monospace;
+  font-size: 22px;
+  background: #000;
+  color: #e0e0e0;
+  border: 2px solid #a0a0a0;
+  padding: 6px 10px;
+  outline: none;
+}
+.mc-input:focus { border-color: #fff; }
+
+/* ---------- Animations ---------- */
+@keyframes splashPulse {
+  0%, 100% { transform: rotate(-18deg) scale(1); }
+  50% { transform: rotate(-18deg) scale(1.09); }
+}
+.splash { animation: splashPulse 0.9s ease-in-out infinite; }
+
+@keyframes panZoom {
+  0% { transform: scale(1.06) translate(-1.5%, -1%); }
+  100% { transform: scale(1.22) translate(1.5%, 1.5%); }
+}
+.pan-anim { animation: panZoom 90s ease-in-out infinite alternate; }
+
+@keyframes toastIn {
+  0% { opacity: 0; transform: translateY(8px); }
+  10% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.toast-anim { animation: toastIn 2.4s ease forwards; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.22s ease-out both; }
+
+@keyframes blinkCursor { 50% { opacity: 0; } }
+.blink { animation: blinkCursor 1s step-end infinite; }
+
+@keyframes hurtFlash { from { opacity: 0.55; } to { opacity: 0; } }
+.hurt-anim { animation: hurtFlash 0.45s ease-out forwards; }
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #2a2a2a; }
+::-webkit-scrollbar-thumb { background: #8b8b8b; border: 2px solid #2a2a2a; }
