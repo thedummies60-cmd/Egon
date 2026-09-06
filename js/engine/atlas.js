@@ -106,14 +106,29 @@
   // Blocks become little isometric cubes, items are the flat sprite.
   const ICON = 32;
 
-  function tileToCanvas(rgba, bright) {
+  // Icons are drawn outside any biome, so tinted blocks use the plains colours
+  // the same way Minecraft's inventory renders them.
+  const ICON_GRASS = 0x91bd59, ICON_FOLIAGE = 0x77ab2f, ICON_WATER = 0x3f76e4;
+
+  function tintFor(block, face) {
+    if (!block || !block.tint) return null;
+    if (block.tintFaces === 'top' && face !== 'top') return null;
+    if (block.tint === MC.TINT.GRASS) return ICON_GRASS;
+    if (block.tint === MC.TINT.FOLIAGE) return ICON_FOLIAGE;
+    return ICON_WATER;
+  }
+
+  function tileToCanvas(rgba, bright, tint) {
     const cv = makeCanvasEl(TILE, TILE);
     const ctx = cv.getContext('2d');
     const img = ctx.createImageData(TILE, TILE);
+    const tr = tint === null || tint === undefined ? 1 : ((tint >> 16) & 255) / 255;
+    const tg = tint === null || tint === undefined ? 1 : ((tint >> 8) & 255) / 255;
+    const tb = tint === null || tint === undefined ? 1 : (tint & 255) / 255;
     for (let i = 0; i < rgba.length; i += 4) {
-      img.data[i] = Math.min(255, rgba[i] * bright);
-      img.data[i + 1] = Math.min(255, rgba[i + 1] * bright);
-      img.data[i + 2] = Math.min(255, rgba[i + 2] * bright);
+      img.data[i] = Math.min(255, rgba[i] * bright * tr);
+      img.data[i + 1] = Math.min(255, rgba[i + 1] * bright * tg);
+      img.data[i + 2] = Math.min(255, rgba[i + 2] * bright * tb);
       img.data[i + 3] = rgba[i + 3];
     }
     ctx.putImageData(img, 0, 0);
@@ -134,9 +149,9 @@
     const topName = faceTex(block, 'top');
     const sideName = faceTex(block, 'side');
     if (!A.tiles[topName] || !A.tiles[sideName]) return;
-    const top = tileToCanvas(A.tiles[topName], 1.0);
-    const left = tileToCanvas(A.tiles[sideName], 0.62);
-    const right = tileToCanvas(A.tiles[sideName], 0.82);
+    const top = tileToCanvas(A.tiles[topName], 1.0, tintFor(block, 'top'));
+    const left = tileToCanvas(A.tiles[sideName], 0.62, tintFor(block, 'side'));
+    const right = tileToCanvas(A.tiles[sideName], 0.82, tintFor(block, 'side'));
     const S = scale;
     ctx.imageSmoothingEnabled = false;
     // top rhombus
@@ -154,6 +169,20 @@
     ctx.setTransform(14 * S / 16, -7 * S / 16, 0, 14 * S / 16, ox + 16 * S, oy + 16 * S);
     ctx.drawImage(right, 0, 0);
     ctx.restore();
+    // grass fringe overlay on both visible sides
+    if (block.overlay && A.tiles[block.overlay]) {
+      const ol = A.tiles[block.overlay];
+      const oL = tileToCanvas(ol, 0.62, ICON_GRASS);
+      const oR = tileToCanvas(ol, 0.82, ICON_GRASS);
+      ctx.save();
+      ctx.setTransform(14 * S / 16, 7 * S / 16, 0, 14 * S / 16, ox + 2 * S, oy + 9 * S);
+      ctx.drawImage(oL, 0, 0);
+      ctx.restore();
+      ctx.save();
+      ctx.setTransform(14 * S / 16, -7 * S / 16, 0, 14 * S / 16, ox + 16 * S, oy + 16 * S);
+      ctx.drawImage(oR, 0, 0);
+      ctx.restore();
+    }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   };
 
@@ -183,7 +212,7 @@
         } else {
           const tn = faceTex(e.block, 'side');
           if (A.tiles[tn]) {
-            const t = tileToCanvas(A.tiles[tn], 1);
+            const t = tileToCanvas(A.tiles[tn], 1, tintFor(e.block, 'side'));
             ctx.drawImage(t, ox, oy, ICON, ICON);
           }
         }

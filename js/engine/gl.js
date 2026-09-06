@@ -78,23 +78,36 @@
     return t;
   };
 
+  /* Vertex attribute arrays are global state, not per-program: an array left
+   * enabled by one program still feeds the next draw and, if its buffer is
+   * too small, makes the draw fail with INVALID_OPERATION. So every pass
+   * declares exactly which locations it wants and the rest get switched off. */
+  const MAX_ATTRIBS = 8;
+
+  G.enableOnly = function (gl, locs) {
+    for (let i = 0; i < MAX_ATTRIBS; i++) {
+      if (locs.indexOf(i) >= 0) gl.enableVertexAttribArray(i);
+      else gl.disableVertexAttribArray(i);
+    }
+  };
+
   // Interleaved attribute layout helper.
   // spec: [{ name, size, type, norm, offset }], stride in bytes
-  G.bindAttribs = function (gl, prog, spec, stride) {
+  G.bindAttribs = function (gl, prog, spec, stride, baseOffset) {
+    baseOffset = baseOffset || 0;
+    const used = [];
     for (let i = 0; i < spec.length; i++) {
       const s = spec[i];
       const loc = prog.a[s.name];
       if (loc === undefined || loc < 0) continue;
-      gl.enableVertexAttribArray(loc);
-      gl.vertexAttribPointer(loc, s.size, s.type, !!s.norm, stride, s.offset);
+      used.push(loc);
     }
-  };
-
-  G.disableAttribs = function (gl, prog, spec) {
+    G.enableOnly(gl, used);
     for (let i = 0; i < spec.length; i++) {
-      const loc = prog.a[spec[i].name];
+      const s = spec[i];
+      const loc = prog.a[s.name];
       if (loc === undefined || loc < 0) continue;
-      gl.disableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, s.size, s.type, !!s.norm, stride, s.offset + baseOffset);
     }
   };
 })();

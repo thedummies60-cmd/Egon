@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Minecraft - Web Edition</title>
+<meta name="description" content="A browser voxel sandbox: infinite procedural worlds, biomes, crafting, mobs, survival and creative modes. Pure HTML + WebGL, no dependencies.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23866043'/%3E%3Crect width='16' height='5' fill='%237cbd6b'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="glcanvas"></canvas>
+
+<!-- ============================ HUD ============================ -->
+<div id="hud" class="hidden">
+  <div id="water-overlay"></div>
+  <div id="lava-overlay"></div>
+  <div id="vignette"></div>
+  <div id="crosshair"></div>
+  <div id="debug" class="hidden"></div>
+  <div id="toasts"></div>
+  <div id="hotbar-name" class="mc-text"></div>
+  <div id="hotbar-wrap">
+    <div id="airbar"></div>
+    <div id="stats">
+      <div id="health" class="bar"></div>
+      <div id="armor" class="bar"></div>
+      <div id="hunger" class="bar"></div>
+    </div>
+    <div id="xpwrap" style="width:100%;position:relative;">
+      <div id="xplevel" class="mc-text"></div>
+      <div id="xpbar"><i></i></div>
+    </div>
+    <div id="hotbar"></div>
+  </div>
+</div>
+
+<!-- ============================ TITLE ============================ -->
+<div id="screen-title" class="overlay hidden">
+  <div id="title-logo-wrap">
+    <canvas id="title-logo"></canvas>
+    <canvas id="title-sublogo"></canvas>
+    <div id="splash" class="mc-text">Powered by WebGL!</div>
+  </div>
+  <div id="title-menu">
+    <button class="btn" id="btn-singleplayer">Singleplayer</button>
+    <button class="btn" id="btn-multiplayer">Multiplayer</button>
+    <div class="btn-row">
+      <button class="btn" id="btn-howto">How to Play</button>
+      <button class="btn" id="btn-gallery">Block Gallery</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="btn-row">
+      <button class="btn" id="btn-options">Options...</button>
+      <button class="btn" id="btn-quit">Quit Game</button>
+    </div>
+  </div>
+  <div id="title-footer">
+    <div class="left mc-text" id="version-text"></div>
+    <div class="right mc-text">A fan-made voxel sandbox. Not affiliated with Mojang or Microsoft.</div>
+  </div>
+</div>
+
+<!-- ============================ WORLD SELECT ============================ -->
+<div id="screen-worlds" class="overlay dim hidden">
+  <h2 class="mc-text" style="font-weight:normal;font-size:26px;margin:0 0 14px;">Select World</h2>
+  <div id="world-list"></div>
+  <div class="menu-col">
+    <div class="btn-row">
+      <button class="btn" id="btn-play">Play Selected World</button>
+      <button class="btn" id="btn-newworld">Create New World</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn small" id="btn-delete">Delete</button>
+      <button class="btn small" id="btn-worlds-back">Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CREATE WORLD ============================ -->
+<div id="screen-create" class="overlay dim hidden">
+  <div class="panel" style="width:min(520px,92vw);">
+    <h2>Create New World</h2>
+    <div class="form-row">
+      <span class="label">World Name</span>
+      <input type="text" id="in-name" value="New World" maxlength="32">
+    </div>
+    <div class="form-row">
+      <span class="label">Seed for the World Generator</span>
+      <input type="text" id="in-seed" placeholder="Leave blank for a random seed" maxlength="32">
+    </div>
+    <div class="form-row">
+      <span class="label">Game Mode</span>
+      <select id="in-mode">
+        <option value="survival">Survival - gather, craft, stay alive</option>
+        <option value="creative">Creative - unlimited blocks, flight</option>
+      </select>
+    </div>
+  </div>
+  <div class="menu-col" style="margin-top:12px;">
+    <div class="btn-row">
+      <button class="btn" id="btn-create">Create New World</button>
+      <button class="btn" id="btn-create-back">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ OPTIONS ============================ -->
+<div id="screen-options" class="overlay dim hidden">
+  <div class="panel" style="width:min(560px,92vw);">
+    <h2>Options</h2>
+    <div id="options-body"></div>
+  </div>
+  <div class="menu-col" style="margin-top:12px;">
+    <button class="btn" id="btn-options-done">Done</button>
+  </div>
+</div>
+
+<!-- ============================ HOW TO PLAY ============================ -->
+<div id="screen-help" class="overlay dim hidden">
+  <div class="panel" style="width:min(640px,94vw);">
+    <h2>How to Play</h2>
+    <div class="help-grid" id="help-body"></div>
+  </div>
+  <div class="menu-col" style="margin-top:12px;">
+    <button class="btn" id="btn-help-back">Back</button>
+  </div>
+</div>
+
+<!-- ============================ GALLERY ============================ -->
+<div id="screen-gallery" class="overlay dim hidden">
+  <div class="panel" style="width:min(760px,94vw);">
+    <h2>Block Gallery</h2>
+    <div id="gallery-body" style="max-height:60vh;overflow:auto;"></div>
+  </div>
+  <div class="menu-col" style="margin-top:12px;">
+    <button class="btn" id="btn-gallery-back">Back</button>
+  </div>
+</div>
+
+<!-- ============================ PAUSE ============================ -->
+<div id="screen-pause" class="overlay dim hidden">
+  <h2 class="mc-text" style="font-weight:normal;font-size:26px;margin:0 0 16px;">Game Menu</h2>
+  <div class="menu-col">
+    <button class="btn" id="btn-resume">Back to Game</button>
+    <div class="btn-row">
+      <button class="btn" id="btn-pause-mode">Switch Game Mode</button>
+      <button class="btn" id="btn-pause-options">Options...</button>
+    </div>
+    <button class="btn" id="btn-save-quit">Save and Quit to Title</button>
+  </div>
+</div>
+
+<!-- ============================ DEATH ============================ -->
+<div id="screen-death" class="overlay hidden">
+  <h1 class="mc-text">You Died!</h1>
+  <div class="mc-text" id="death-cause" style="font-size:20px;"></div>
+  <div class="menu-col">
+    <button class="btn" id="btn-respawn">Respawn</button>
+    <button class="btn" id="btn-death-title">Title Screen</button>
+  </div>
+</div>
+
+<!-- ============================ LOADING ============================ -->
+<div id="screen-loading" class="overlay hidden">
+  <div class="mc-text" style="font-size:24px;" id="loading-text">Building terrain...</div>
+  <div id="loadbar"><i></i></div>
+  <div class="mc-text" id="loading-tip" style="font-size:16px;color:#999;"></div>
+</div>
+
+<!-- ============================ CONTAINERS ============================ -->
+<div id="screen-container" class="overlay dim-light hidden"></div>
+<div id="cursor-stack" class="hidden"><span class="icon"></span><span class="count"></span></div>
+<div id="tooltip" class="hidden"></div>
+
+<!-- ============================ SCRIPTS ============================ -->
+<script src="js/lib/math.js"></script>
+<script src="js/lib/noise.js"></script>
+<script src="js/engine/paint.js"></script>
+<script src="js/engine/blocktex.js"></script>
+<script src="js/world/blocks.js"></script>
+<script src="js/world/items.js"></script>
+<script src="js/engine/atlas.js"></script>
+<script src="js/engine/mobart.js"></script>
+<script src="js/engine/gl.js"></script>
+<script src="js/engine/shaders.js"></script>
+<script src="js/engine/input.js"></script>
+<script src="js/world/biomes.js"></script>
+<script src="js/world/worldgen.js"></script>
+<script src="js/world/world.js"></script>
+<script src="js/world/mesher.js"></script>
+<script src="js/engine/renderer.js"></script>
+<script src="js/game/physics.js"></script>
+<script src="js/game/player.js"></script>
+<script src="js/game/entities.js"></script>
+<script src="js/game/inventory.js"></script>
+<script src="js/game/recipes.js"></script>
+<script src="js/game/audio.js"></script>
+<script src="js/game/game.js"></script>
+<script src="js/game/gamerender.js"></script>
+<script src="js/ui/logo.js"></script>
+<script src="js/ui/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -72,7 +72,7 @@
   def('tuff', { hardness: 1.5, tool: 'pickaxe', level: 1 });
   def('calcite', { hardness: 0.75, tool: 'pickaxe', level: 1 });
   def('bedrock', { hardness: -1, unbreakable: true, drop: null, group: 'misc' });
-  def('obsidian', { hardness: 50, tool: 'pickaxe', level: 3 });
+  def('obsidian', { hardness: 50, tool: 'pickaxe', level: 4 });
   def('netherrack', { hardness: 0.4, tool: 'pickaxe', level: 1, sound: 'stone' });
   def('magma', { hardness: 0.5, tool: 'pickaxe', level: 1, light: 3, tex: 'magma', display: 'Magma Block' });
 
@@ -109,25 +109,25 @@
 
   /* ---------------- ores & mineral blocks ---------------- */
   def('coal_ore', { hardness: 3, tool: 'pickaxe', level: 1, drop: 'coal', group: 'nature', smelt: { to: 'coal', xp: 0.1 } });
-  def('iron_ore', { hardness: 3, tool: 'pickaxe', level: 1, drop: 'raw_iron', group: 'nature', smelt: { to: 'iron_ingot', xp: 0.7 } });
-  def('copper_ore', { hardness: 3, tool: 'pickaxe', level: 1, drop: 'raw_copper', dropCount: 3, group: 'nature', smelt: { to: 'copper_ingot', xp: 0.7 } });
-  def('gold_ore', { hardness: 3, tool: 'pickaxe', level: 2, drop: 'raw_gold', group: 'nature', smelt: { to: 'gold_ingot', xp: 1 } });
-  def('redstone_ore', { hardness: 3, tool: 'pickaxe', level: 2, drop: 'redstone', dropCount: 4, light: 0, group: 'nature' });
-  def('lapis_ore', { hardness: 3, tool: 'pickaxe', level: 1, drop: 'lapis_lazuli', dropCount: 6, group: 'nature' });
-  def('diamond_ore', { hardness: 3, tool: 'pickaxe', level: 2, drop: 'diamond', group: 'nature' });
-  def('emerald_ore', { hardness: 3, tool: 'pickaxe', level: 2, drop: 'emerald', group: 'nature' });
+  def('iron_ore', { hardness: 3, tool: 'pickaxe', level: 2, drop: 'raw_iron', group: 'nature', smelt: { to: 'iron_ingot', xp: 0.7 } });
+  def('copper_ore', { hardness: 3, tool: 'pickaxe', level: 2, drop: 'raw_copper', dropCount: 3, group: 'nature', smelt: { to: 'copper_ingot', xp: 0.7 } });
+  def('gold_ore', { hardness: 3, tool: 'pickaxe', level: 3, drop: 'raw_gold', group: 'nature', smelt: { to: 'gold_ingot', xp: 1 } });
+  def('redstone_ore', { hardness: 3, tool: 'pickaxe', level: 3, drop: 'redstone', dropCount: 4, light: 0, group: 'nature' });
+  def('lapis_ore', { hardness: 3, tool: 'pickaxe', level: 2, drop: 'lapis_lazuli', dropCount: 6, group: 'nature' });
+  def('diamond_ore', { hardness: 3, tool: 'pickaxe', level: 3, drop: 'diamond', group: 'nature' });
+  def('emerald_ore', { hardness: 3, tool: 'pickaxe', level: 3, drop: 'emerald', group: 'nature' });
   def('deepslate_coal_ore', { hardness: 4.5, tool: 'pickaxe', level: 1, drop: 'coal', group: 'nature' });
-  def('deepslate_iron_ore', { hardness: 4.5, tool: 'pickaxe', level: 1, drop: 'raw_iron', group: 'nature' });
-  def('deepslate_gold_ore', { hardness: 4.5, tool: 'pickaxe', level: 2, drop: 'raw_gold', group: 'nature' });
-  def('deepslate_redstone_ore', { hardness: 4.5, tool: 'pickaxe', level: 2, drop: 'redstone', dropCount: 4, group: 'nature' });
-  def('deepslate_lapis_ore', { hardness: 4.5, tool: 'pickaxe', level: 1, drop: 'lapis_lazuli', dropCount: 6, group: 'nature' });
-  def('deepslate_diamond_ore', { hardness: 4.5, tool: 'pickaxe', level: 2, drop: 'diamond', group: 'nature' });
-  def('deepslate_emerald_ore', { hardness: 4.5, tool: 'pickaxe', level: 2, drop: 'emerald', group: 'nature' });
+  def('deepslate_iron_ore', { hardness: 4.5, tool: 'pickaxe', level: 2, drop: 'raw_iron', group: 'nature' });
+  def('deepslate_gold_ore', { hardness: 4.5, tool: 'pickaxe', level: 3, drop: 'raw_gold', group: 'nature' });
+  def('deepslate_redstone_ore', { hardness: 4.5, tool: 'pickaxe', level: 3, drop: 'redstone', dropCount: 4, group: 'nature' });
+  def('deepslate_lapis_ore', { hardness: 4.5, tool: 'pickaxe', level: 2, drop: 'lapis_lazuli', dropCount: 6, group: 'nature' });
+  def('deepslate_diamond_ore', { hardness: 4.5, tool: 'pickaxe', level: 3, drop: 'diamond', group: 'nature' });
+  def('deepslate_emerald_ore', { hardness: 4.5, tool: 'pickaxe', level: 3, drop: 'emerald', group: 'nature' });
   def('coal_block', { hardness: 5, tool: 'pickaxe', level: 1, fuel: 1600 });
   def('iron_block', { hardness: 5, tool: 'pickaxe', level: 1 });
-  def('gold_block', { hardness: 3, tool: 'pickaxe', level: 2 });
-  def('diamond_block', { hardness: 5, tool: 'pickaxe', level: 2 });
-  def('emerald_block', { hardness: 5, tool: 'pickaxe', level: 2 });
+  def('gold_block', { hardness: 3, tool: 'pickaxe', level: 3 });
+  def('diamond_block', { hardness: 5, tool: 'pickaxe', level: 3 });
+  def('emerald_block', { hardness: 5, tool: 'pickaxe', level: 3 });
   def('lapis_block', { hardness: 3, tool: 'pickaxe', level: 1 });
   def('redstone_block', { hardness: 5, tool: 'pickaxe', level: 1 });
   def('copper_block', { hardness: 3, tool: 'pickaxe', level: 1 });
