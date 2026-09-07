@@ -83,6 +83,7 @@
     this.tickAccum = 0;
     this.entities = [];
     this.savedEdits = opts.edits || null;     // key -> {idxString: id}
+    this.savedTiles = opts.tiles || null;     // key -> {idxString: serialised tile}
     this.T = B.T;
   }
 
@@ -192,6 +193,16 @@
     this.gen.generateChunk(c);
     c.recomputeMaxY();
     this.applyPending(c);
+
+    // restore chest / furnace contents for this chunk
+    if (this.savedTiles && this.savedTiles[key]) {
+      c.tiles = new Map();
+      const t = this.savedTiles[key];
+      for (const k in t) {
+        const tile = World.deserializeTile(t[k], cx, cz, +k);
+        if (tile) c.tiles.set(+k, tile);
+      }
+    }
 
     // replay the player's saved edits for this chunk
     if (this.savedEdits && this.savedEdits[key]) {
@@ -533,7 +544,70 @@
     return MC.math.vec3.normalize(out, out);
   };
 
-  /* ---------------- serialisation of player edits ---------------- */
+  /* ---------------- serialisation ---------------- */
+
+  // Stacks travel as [name, count, durability]; 0 means an empty slot.
+  function serStack(st) { return st ? [st.name, st.count, st.dur] : 0; }
+  function desStack(d) { return d ? MC.stack(d[0], d[1], d[2]) : null; }
+
+  World.serializeTile = function (t) {
+    if (t.kind === 'chest') return { k: 'c', i: t.items.map(serStack) };
+    return {
+      k: 'f', in: serStack(t.input), fu: serStack(t.fuel), ou: serStack(t.output),
+      b: t.burn, bm: t.burnMax, ck: t.cook
+    };
+  };
+
+  World.deserializeTile = function (d, cx, cz, idx) {
+    if (!d) return null;
+    const x = cx * CX + (idx & 15);
+    const z = cz * CZ + ((idx >> 4) & 15);
+    const y = idx >> 8;
+    if (d.k === 'c') {
+      const items = new Array(27).fill(null);
+      const src = d.i || [];
+      for (let i = 0; i < 27; i++) items[i] = desStack(src[i]);
+      return { kind: 'chest', x: x, y: y, z: z, items: items };
+    }
+    return {
+      kind: 'furnace', x: x, y: y, z: z,
+      input: desStack(d.in), fuel: desStack(d.fu), output: desStack(d.ou),
+      burn: d.b || 0, burnMax: d.bm || 0, cook: d.ck || 0
+    };
+  };
+
+  // Called when a chunk is about to unload, so its containers survive.
+  World.prototype.stashChunk = function (c) {
+    if (c.edits && c.edits.size) {
+      if (!this.savedEdits) this.savedEdits = {};
+      const o = {};
+      c.edits.forEach(function (v, k) { o[k] = v; });
+      this.savedEdits[c.key] = o;
+    }
+    if (c.tiles && c.tiles.size) {
+      if (!this.savedTiles) this.savedTiles = {};
+      const o = {};
+      c.tiles.forEach(function (t, k) { o[k] = World.serializeTile(t); });
+      this.savedTiles[c.key] = o;
+    } else if (this.savedTiles) {
+      delete this.savedTiles[c.key];
+    }
+  };
+
+  World.prototype.exportTiles = function () {
+    const out = {};
+    this.chunks.forEach(function (c, key) {
+      if (!c.tiles || c.tiles.size === 0) return;
+      const o = {};
+      c.tiles.forEach(function (t, k) { o[k] = World.serializeTile(t); });
+      out[key] = o;
+    });
+    if (this.savedTiles) {
+      for (const k in this.savedTiles) if (!out[k]) out[k] = this.savedTiles[k];
+    }
+    return out;
+  };
+
   World.prototype.exportEdits = function () {
     const out = {};
     this.chunks.forEach(function (c, key) {

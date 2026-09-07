@@ -66,7 +66,13 @@ item organised into tabs, and instant mining.
 
 **Crafting.** Shaped and shapeless recipes matched against a 2×2 or 3×3 grid,
 furnaces with fuel and smelting progress, and chests. About 130 blocks and 99
-items including the full tool, weapon and armour trees.
+items including the full tool, weapon and armour trees. Containers keep their
+contents across a save, and a furnace left burning is still burning when you
+come back.
+
+**Living world.** Random ticks grow saplings into full trees, spread grass onto
+bare dirt and let it die back under cover — so chopping a tree, replanting the
+sapling it dropped and coming back to a grown one is a complete loop.
 
 **Mobs.** 17 creatures built from animated box rigs — pig, cow, mooshroom,
 sheep, chicken, rabbit, wolf, goat, horse, villager, zombie, skeleton, creeper,
@@ -109,8 +115,9 @@ js/
   main.js           bootstrap and frame loop
 ```
 
-Worlds save to `localStorage`. Only the blocks you changed are stored — the
-rest is regenerated from the seed — so saves stay small for an infinite world.
+Worlds save to `localStorage`. Only the blocks you changed and the contents of
+your containers are stored — the rest is regenerated from the seed — so saves
+stay small for an infinite world.
 
 ## Performance
 

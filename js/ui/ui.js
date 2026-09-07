@@ -354,7 +354,7 @@
     if (!data) { this.toast('Could not load that world.'); return; }
     this.launch({
       name: data.name, seed: data.seed, mode: data.mode, time: data.time,
-      player: data.player, inventory: data.inventory, edits: data.edits
+      player: data.player, inventory: data.inventory, edits: data.edits, tiles: data.tiles
     });
   };
 

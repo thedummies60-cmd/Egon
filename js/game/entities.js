@@ -485,8 +485,9 @@
     // compact the tail so the array doesn't grow forever
     while (this.n > 0 && this.life[this.n - 1] <= 0) this.n--;
   };
+  const _partQuad = new Float32Array(12);
   Particles.prototype.render = function (batch, camRight, camUp) {
-    const p = new Float32Array(12);
+    const p = _partQuad;
     for (let i = 0; i < this.n; i++) {
       if (this.life[i] <= 0) continue;
       const s = this.size[i] * Math.min(1, this.life[i] / 0.18);

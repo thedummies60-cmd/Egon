@@ -64,7 +64,7 @@
 
     this.worldName = opts.name || 'New World';
     this.seedText = seedStr;
-    this.world = new MC.World(numeric, { edits: opts.edits || null });
+    this.world = new MC.World(numeric, { edits: opts.edits || null, tiles: opts.tiles || null });
     this.world.time = opts.time === undefined ? 0.28 : opts.time;
     this.mesher = new MC.Mesher(this.world);
     this.inventory = new MC.Inventory();
@@ -187,6 +187,7 @@
     this.updateEntities(dt);
     this.particles.update(dt, this.world);
     this.updateTiles(dt);
+    this.randomTick(dt);
     this.spawnTimer -= dt;
     if (this.spawnTimer <= 0 && this.ready) { this.spawnTimer = 3; this.trySpawnMobs(); }
 
@@ -246,7 +247,7 @@
     }
     want.sort(function (a, b) { return a[0] - b[0]; });
     for (let i = 0; i < want.length && gen > 0; i++) {
-      world.createChunk(want[i][1], want[i][2]);
+      this.rememberTiles(world.createChunk(want[i][1], want[i][2]));
       gen--;
     }
 
@@ -313,11 +314,9 @@
     });
     for (let i = 0; i < drop.length; i++) {
       const c = world.chunks.get(drop[i]);
-      if (c && c.edits && c.edits.size) {
-        if (!world.savedEdits) world.savedEdits = {};
-        const o = {};
-        c.edits.forEach(function (v, k) { o[k] = v; });
-        world.savedEdits[drop[i]] = o;
+      if (c) {
+        world.stashChunk(c);
+        if (c.tiles && c.tiles.size) this.forgetTiles(c);
       }
       world.unloadChunk(drop[i]);
       this.renderer.freeChunk(drop[i]);
@@ -731,6 +730,7 @@
           if (b.unbreakable || b.hardness > 12) continue;
           if (Math.random() < d / power * 0.65) continue;
           if (Math.random() < 0.25 && b.drop) this.dropItem(bx + 0.5, by + 0.5, bz + 0.5, b.drop, b.dropCount);
+          this.removeTile(bx, by, bz);
           world.setBlock(bx, by, bz, 0);
         }
       }
@@ -869,6 +869,25 @@
 
   Game.prototype.createTile = function (x, y, z, kind) { this.getTile(x, y, z, true, kind); };
 
+  // Furnaces tick from a flat list, so it has to follow chunks in and out.
+  Game.prototype.rememberTiles = function (chunk) {
+    if (!chunk || !chunk.tiles) return chunk;
+    const self = this;
+    chunk.tiles.forEach(function (t) {
+      if (t.kind === 'furnace' && self.activeTiles.indexOf(t) < 0) self.activeTiles.push(t);
+    });
+    return chunk;
+  };
+
+  Game.prototype.forgetTiles = function (chunk) {
+    if (!chunk || !chunk.tiles) return;
+    const self = this;
+    chunk.tiles.forEach(function (t) {
+      const i = self.activeTiles.indexOf(t);
+      if (i >= 0) self.activeTiles.splice(i, 1);
+    });
+  };
+
   Game.prototype.removeTile = function (x, y, z) {
     const c = this.world.chunkAtBlock(x, z);
     if (!c || !c.tiles) return;
@@ -921,6 +940,93 @@
           this.player.addXP(Math.max(1, Math.round(recipe.xp * 3)));
         }
       } else t.cook = Math.max(0, t.cook - dt * 2);
+    }
+  };
+
+  /* ============================================================
+   * random ticks - saplings growing, grass spreading and dying back
+   * ============================================================ */
+
+  const SAPLING_TREE = {
+    oak_sapling: ['oak', 'big_oak'], birch_sapling: ['birch'], spruce_sapling: ['spruce', 'mega_spruce'],
+    jungle_sapling: ['jungle', 'mega_jungle'], acacia_sapling: ['acacia'], dark_oak_sapling: ['dark_oak']
+  };
+
+  Game.prototype.randomTick = function (dt) {
+    if (!this.ready) return;
+    this.rtAccum = (this.rtAccum || 0) + dt;
+    if (this.rtAccum < 0.5) return;
+    this.rtAccum = 0;
+
+    const world = this.world, p = this.player;
+    const pcx = Math.floor(p.x) >> 4, pcz = Math.floor(p.z) >> 4;
+    const R = Math.min(4, this.settings.renderDistance);
+    const rng = this._rtRng || (this._rtRng = new MC.RNG((Math.random() * 0xffffffff) >>> 0));
+
+    for (let dz = -R; dz <= R; dz++) {
+      for (let dx = -R; dx <= R; dx++) {
+        const c = world.getChunk(pcx + dx, pcz + dz);
+        if (!c || !c.lit) continue;
+        // sample a handful of surface columns per chunk rather than every block
+        for (let n = 0; n < 3; n++) {
+          const lx = rng.int(16), lz = rng.int(16);
+          const wx = c.cx * 16 + lx, wz = c.cz * 16 + lz;
+          const top = world.topSolid(wx, wz);
+          if (top < 0) continue;
+          const y = rng.intRange(Math.max(0, top - 2), Math.min(MC.CHUNK.Y - 2, top + 1));
+          this.tickBlock(wx, y, wz, rng);
+        }
+      }
+    }
+  };
+
+  Game.prototype.tickBlock = function (x, y, z, rng) {
+    const world = this.world;
+    const id = world.getBlock(x, y, z);
+    if (id === 0) return;
+    const name = B.get(id).name;
+
+    /* --- saplings grow into trees --- */
+    const kinds = SAPLING_TREE[name];
+    if (kinds) {
+      if (world.getSkyLight(x, y, z) < 9 && world.getBlockLight(x, y, z) < 9) return;
+      if (!rng.chance(0.06)) return;
+      // needs headroom
+      for (let k = 1; k <= 5; k++) if (B.T.opaque[world.getBlock(x, y + k, z)]) return;
+      const type = kinds.length > 1 && rng.chance(0.15) ? kinds[1] : kinds[0];
+      const self = this;
+      world.setBlock(x, y, z, 0);
+      world.gen.tree(type, x, y, z, rng, function (bx, by, bz, blockId, soft) {
+        if (soft && world.getBlock(bx, by, bz) !== 0) return;
+        world.setBlock(bx, by, bz, blockId);
+      });
+      this.markNeighbours(x, y, z);
+      this.audio.place('grass');
+      return;
+    }
+
+    /* --- grass dies under cover, and spreads onto bare dirt --- */
+    if (name === 'grass_block') {
+      const above = world.getBlock(x, y + 1, z);
+      if (B.T.opaque[above]) {
+        if (rng.chance(0.25)) world.setBlock(x, y, z, B.idOf('dirt'));
+      }
+      return;
+    }
+    if (name === 'dirt') {
+      if (B.T.opaque[world.getBlock(x, y + 1, z)]) return;
+      if (world.getSkyLight(x, y + 1, z) < 4) return;
+      if (!rng.chance(0.35)) return;
+      // only if a grass block is next to it
+      for (let d = 0; d < 4; d++) {
+        const nx = x + [1, -1, 0, 0][d], nz = z + [0, 0, 1, -1][d];
+        for (let dy = -1; dy <= 1; dy++) {
+          if (B.get(world.getBlock(nx, y + dy, nz)).name === 'grass_block') {
+            world.setBlock(x, y, z, B.idOf('grass_block'));
+            return;
+          }
+        }
+      }
     }
   };
 
@@ -983,7 +1089,8 @@
         selected: p.selected, respawn: p.respawnPoint
       },
       inventory: this.inventory.serialize(),
-      edits: this.world.exportEdits()
+      edits: this.world.exportEdits(),
+      tiles: this.world.exportTiles()
     };
   };
 

@@ -305,7 +305,8 @@
     gl.uniform1f(p.u.uAlphaTest, water ? 0.05 : 0.5);
     gl.uniform1f(p.u.uOpacity, water ? 0.76 : 1.0);
     const CY = MC.CHUNK.Y;
-    const list = [];
+    const list = this._visible || (this._visible = []);
+    list.length = 0;
     const self = this;
     this.chunkMeshes.forEach(function (entry) {
       const segs = water ? entry.water : entry.segs;

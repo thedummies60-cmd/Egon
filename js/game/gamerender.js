@@ -8,7 +8,9 @@
   const B = MC.blocks;
   const G = MC.Game.prototype;
 
-  const _m = mat4.create(), _t = mat4.create();
+  const _m = mat4.create(), _t = mat4.create(), _pm = mat4.create();
+  const _hand = mat4.create();
+  const _quad = new Float32Array(12);
   const _right = vec3.create(), _up = vec3.create(), _fwd = vec3.create();
   const WHITE = [255, 255, 255, 255];
 
@@ -249,9 +251,8 @@
       if (ry) mat4.rotateY(_t, _t, ry);
       if (rz) mat4.rotateZ(_t, _t, rz);
       mat4.translate(_t, _t, part.pos[0] - part.pivot[0], part.pos[1] - part.pivot[1], part.pos[2] - part.pivot[2]);
-      const mm = mat4.create();
-      mat4.multiply(mm, _m, _t);
-      batch.box(mm, part.size[0], part.size[1], part.size[2], entry.uv, WHITE, true);
+      mat4.multiply(_pm, _m, _t);
+      batch.box(_pm, part.size[0], part.size[1], part.size[2], entry.uv, WHITE, true);
     }
   };
 
@@ -285,7 +286,7 @@
     const batch = r.batchBlocks;
     batch.reset();
 
-    const hand = mat4.create();
+    const hand = _hand;
     mat4.identity(hand);
 
     if (t && t.isBlock && t.block.render !== 'cross') {
@@ -312,7 +313,7 @@
       mat4.rotateX(hand, hand, swingRot * 0.4);
       mat4.copy(_m, hand);
       const s = 0.22;
-      const P = new Float32Array(12);
+      const P = _quad;
       const corners = [[-s, -s], [s, -s], [s, s], [-s, s]];
       for (let k = 0; k < 4; k++) {
         const lx = corners[k][0], ly = corners[k][1];
