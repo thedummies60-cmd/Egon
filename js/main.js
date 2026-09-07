@@ -82,11 +82,12 @@
       if (!game.running || game.panorama) return false;
       if (game.screen) return false;            // container UI handles its own clicks
       if (game.paused) return false;
-      if (!game.input.locked && !game.player.dead) {
+      if (!game.input.locked && !game.input.lockBlocked && !game.player.dead) {
         game.audio.resume();
         game.input.requestLock();
         return true;
       }
+      game.audio.resume();
       return false;
     };
 
@@ -99,6 +100,12 @@
           !game.screen && !game.player.dead) {
         ui.pause();
       }
+    };
+
+    // Some embeddings (an iframe without allow="pointer-lock") refuse it.
+    // The input layer falls back to drag-to-look; just say so once.
+    game.input.onLockBlocked = function () {
+      ui.toast('Pointer lock unavailable here - drag the mouse to look around');
     };
 
     document.addEventListener('visibilitychange', function () {

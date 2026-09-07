@@ -29,6 +29,9 @@
     this.pressedThisFrame = Object.create(null);
     this.mouse = { dx: 0, dy: 0, left: false, right: false, middle: false, wheel: 0 };
     this.locked = false;
+    this.lockBlocked = false;   // pointer lock refused (common inside an iframe)
+    this.dragging = false;
+    this.dragDist = 0;
     this.sensitivity = 0.0022;
     this.invertY = false;
     this.enabled = true;
@@ -61,42 +64,71 @@
 
     document.addEventListener('pointerlockchange', function () {
       self.locked = document.pointerLockElement === self.canvas;
-      if (!self.locked) { self.mouse.left = false; self.mouse.right = false; }
+      if (self.locked) self.lockBlocked = false;
+      if (!self.locked) { self.mouse.left = false; self.mouse.right = false; self.dragging = false; }
       if (self.onLockChange) self.onLockChange(self.locked);
     });
 
     this.canvas.addEventListener('mousemove', function (e) {
-      if (!self.locked) return;
-      self.mouse.dx += e.movementX || 0;
-      self.mouse.dy += e.movementY || 0;
+      if (self.locked) {
+        self.mouse.dx += e.movementX || 0;
+        self.mouse.dy += e.movementY || 0;
+        return;
+      }
+      // Fallback when pointer lock is unavailable: drag to look. Holding the
+      // button still means "mine", so a click that doesn't move keeps digging
+      // and anything past a few pixels turns into a look instead.
+      if (!self.dragging) return;
+      const dx = e.movementX || 0, dy = e.movementY || 0;
+      self.dragDist += Math.abs(dx) + Math.abs(dy);
+      if (self.dragDist > 6) self.mouse.left = false;
+      self.mouse.dx += dx;
+      self.mouse.dy += dy;
     });
 
     this.canvas.addEventListener('mousedown', function (e) {
       if (self.onMouseDown && self.onMouseDown(e.button, e)) return;
-      if (!self.locked) return;
-      if (e.button === 0) self.mouse.left = true;
+      if (!self.locked && !self.lockBlocked) return;
+      if (e.button === 0) { self.mouse.left = true; self.dragging = true; self.dragDist = 0; }
       if (e.button === 1) { self.mouse.middle = true; e.preventDefault(); }
-      if (e.button === 2) self.mouse.right = true;
+      if (e.button === 2) { self.mouse.right = true; self.dragging = true; self.dragDist = 0; }
     });
 
     window.addEventListener('mouseup', function (e) {
       if (e.button === 0) self.mouse.left = false;
       if (e.button === 1) self.mouse.middle = false;
       if (e.button === 2) self.mouse.right = false;
+      if (e.button === 0 || e.button === 2) self.dragging = false;
     });
 
     this.canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
     window.addEventListener('wheel', function (e) {
       if (self.onWheel && self.onWheel(e)) return;
-      if (!self.locked) return;
+      if (!self.locked && !self.lockBlocked) return;
       self.mouse.wheel += Math.sign(e.deltaY);
       e.preventDefault();
     }, { passive: false });
   };
 
   Input.prototype.requestLock = function () {
-    if (this.canvas.requestPointerLock) this.canvas.requestPointerLock();
+    const self = this;
+    if (!this.canvas.requestPointerLock) { this.markLockBlocked(); return; }
+    let r;
+    try { r = this.canvas.requestPointerLock(); }
+    catch (e) { this.markLockBlocked(); return; }
+    // Chrome returns a promise that rejects when the frame disallows it.
+    if (r && typeof r.catch === 'function') r.catch(function () { self.markLockBlocked(); });
+    // Some browsers just do nothing at all, so check whether it took.
+    setTimeout(function () {
+      if (!self.locked && document.pointerLockElement !== self.canvas) self.markLockBlocked();
+    }, 400);
+  };
+
+  Input.prototype.markLockBlocked = function () {
+    if (this.lockBlocked) return;
+    this.lockBlocked = true;
+    if (this.onLockBlocked) this.onLockBlocked();
   };
   Input.prototype.exitLock = function () {
     if (document.exitPointerLock) document.exitPointerLock();

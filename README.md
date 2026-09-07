@@ -10,16 +10,36 @@ so the repository contains no image or audio assets at all.
 
 ## Play it
 
+Three ways, easiest first.
+
+**1. One file, no server.** Download [`egon.html`](egon.html) and open it. It is
+the whole game inlined into a single 426 KB HTML file with no external
+requests, so it works offline and straight off `file://`.
+
+**2. Clone and serve.**
+
 ```bash
 git clone https://github.com/thedummies60-cmd/Egon.git
 cd Egon
 python3 -m http.server 8000     # or: npx serve .
 ```
 
-Then open <http://localhost:8000>.
+Then open <http://localhost:8000>. Opening `index.html` directly from disk also
+works — the game uses classic scripts rather than ES modules precisely so
+`file://` is fine.
 
-Opening `index.html` directly from disk works too — the game uses classic
-scripts rather than ES modules precisely so `file://` is fine.
+**3. Rebuild the single file** after changing anything under `js/` or `css/`:
+
+```bash
+node build.js                   # -> egon.html
+node build.js out.html --body   # body-only, for hosts with their own skeleton
+```
+
+### Mouse look
+
+The game grabs the pointer so the mouse turns the camera. Where that is not
+allowed — inside a sandboxed iframe, for instance — it falls back to
+drag-to-look: hold the button and move to turn, hold still to keep mining.
 
 ## Controls
 

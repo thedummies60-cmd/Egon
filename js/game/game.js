@@ -157,7 +157,7 @@
 
     if (!this.paused && !this.screen) {
       /* --- look --- */
-      if (input.locked) {
+      if (input.locked || input.lockBlocked) {
         const m = input.consumeMouse();
         const sens = input.sensitivity * this.settings.sensitivity;
         player.yaw -= m.dx * sens;
