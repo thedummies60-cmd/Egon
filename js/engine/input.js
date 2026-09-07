@@ -33,8 +33,11 @@
     this.everLocked = false;    // it worked at least once, so it isn't blocked
     this.lockRetries = 0;
     this.forceDrag = false;     // user chose drag-to-look in Options
+    this.virtual = false;       // game is in play and wants the cursor captured
     this.dragging = false;
     this.dragDist = 0;
+    this.pointerX = 0; this.pointerY = 0; this.hasPointer = false;
+    this.edgeX = 0; this.edgeY = 0;   // how far into the screen edge the cursor is
     this.sensitivity = 0.0022;
     this.invertY = false;
     this.enabled = true;
@@ -82,15 +85,35 @@
         self.mouse.dy += e.movementY || 0;
         return;
       }
-      // Fallback when pointer lock is unavailable: drag to look. Holding the
-      // button still means "mine", so a click that doesn't move keeps digging
-      // and anything past a few pixels turns into a look instead.
-      if (!self.dragging) return;
-      const dx = e.movementX || 0, dy = e.movementY || 0;
-      self.dragDist += Math.abs(dx) + Math.abs(dy);
-      if (self.dragDist > 6) self.mouse.left = false;
+      const px = e.clientX, py = e.clientY;
+      const dx = self.hasPointer ? px - self.pointerX : 0;
+      const dy = self.hasPointer ? py - self.pointerY : 0;
+      self.pointerX = px; self.pointerY = py; self.hasPointer = true;
+
+      if (self.forceDrag) {
+        // Explicit drag-to-look: only turn while a button is held. Holding
+        // still keeps mining, moving past a few pixels becomes a look.
+        if (!self.dragging) return;
+        self.dragDist += Math.abs(dx) + Math.abs(dy);
+        if (self.dragDist > 6) self.mouse.left = false;
+        self.mouse.dx += dx;
+        self.mouse.dy += dy;
+        return;
+      }
+
+      if (!self.lockBlocked || !self.virtual) return;
+
+      // Pointer lock is unavailable but the game wants the cursor captured, so
+      // approximate it: raw movement turns the camera, and because the real
+      // pointer runs out of window, nearing an edge keeps turning that way.
       self.mouse.dx += dx;
       self.mouse.dy += dy;
+      self.updateEdge(px, py);
+    });
+
+    this.canvas.addEventListener('mouseleave', function () {
+      self.hasPointer = false;
+      self.edgeX = 0; self.edgeY = 0;
     });
 
     this.canvas.addEventListener('mousedown', function (e) {
@@ -99,6 +122,7 @@
       if (e.button === 0) { self.mouse.left = true; self.dragging = true; self.dragDist = 0; }
       if (e.button === 1) { self.mouse.middle = true; e.preventDefault(); }
       if (e.button === 2) { self.mouse.right = true; self.dragging = true; self.dragDist = 0; }
+      if (!self.forceDrag) self.updateEdge(e.clientX, e.clientY);
     });
 
     window.addEventListener('mouseup', function (e) {
@@ -116,6 +140,15 @@
       self.mouse.wheel += Math.sign(e.deltaY);
       e.preventDefault();
     }, { passive: false });
+  };
+
+  /* How deep the cursor sits in the screen's edge band, -1..1 per axis. */
+  Input.prototype.updateEdge = function (px, py) {
+    const w = window.innerWidth, h = window.innerHeight;
+    const mx = Math.max(40, Math.min(160, w * 0.14));
+    const my = Math.max(30, Math.min(120, h * 0.12));
+    this.edgeX = px < mx ? -(1 - px / mx) : (px > w - mx ? 1 - (w - px) / mx : 0);
+    this.edgeY = py < my ? -(1 - py / my) : (py > h - my ? 1 - (h - py) / my : 0);
   };
 
   Input.prototype.requestLock = function () {
@@ -179,6 +212,7 @@
     } else {
       this.lockBlocked = false;
       this.dragging = false;
+      this.edgeX = 0; this.edgeY = 0;
     }
   };
 

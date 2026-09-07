@@ -37,13 +37,18 @@ node build.js out.html --body   # body-only, for hosts with their own skeleton
 
 ### Mouse look
 
-The game captures the cursor so the mouse turns the camera. **Press Esc to
-release it** — that also opens the pause menu.
+Click Play and the cursor disappears — the mouse turns the camera and stays
+out of your way. It comes back when you press **Esc**, open the inventory with
+**E**, or open a crafting table, furnace or chest.
 
-Where capturing is not allowed — inside a sandboxed iframe, for instance — the
-game falls back to drag-to-look: hold the button and move to turn, hold still
-to keep mining. You can also pick that mode yourself under **Options → Mouse**
-if you would rather keep your cursor.
+Real capture uses the browser's pointer lock, which some embeddings refuse (a
+sandboxed iframe without `allow-pointer-lock`, for example). There the game
+hides the cursor and reads raw movement instead, and because the pointer runs
+out of window, holding it near a screen edge keeps turning that way. It plays
+much the same; running `egon.html` locally gets you true capture.
+
+Prefer to keep your pointer visible? **Options → Mouse** switches to
+drag-to-look: hold a button and move to turn, hold still to keep mining.
 
 ## Controls
 

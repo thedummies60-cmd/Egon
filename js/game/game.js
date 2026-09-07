@@ -156,13 +156,27 @@
       return;
     }
 
+    // The input layer needs to know whether the game currently wants the
+    // cursor captured, so it can stand in for pointer lock where that is
+    // refused, and give the pointer back for menus.
+    const wantCapture = !this.paused && !this.screen && !player.dead && !this.panorama;
+    input.virtual = wantCapture;
+    this.setCursorHidden(wantCapture && (input.locked || (input.lockBlocked && !input.forceDrag)));
+
     if (!this.paused && !this.screen) {
       /* --- look --- */
       if (input.locked || input.lockBlocked) {
         const m = input.consumeMouse();
         const sens = input.sensitivity * this.settings.sensitivity;
+        const inv = this.settings.invertY ? -1 : 1;
         player.yaw -= m.dx * sens;
-        player.pitch += (this.settings.invertY ? -1 : 1) * m.dy * sens;
+        player.pitch += inv * m.dy * sens;
+        // Without real capture the pointer hits the window edge and stops, so
+        // sitting in the edge band keeps turning in that direction.
+        if (!input.locked && !input.forceDrag) {
+          player.yaw -= input.edgeX * 2.9 * dt;
+          player.pitch += inv * input.edgeY * 1.5 * dt;
+        }
         player.pitch = clamp(player.pitch, -Math.PI / 2 + 0.001, Math.PI / 2 - 0.001);
         player.yaw = ((player.yaw % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
       }
@@ -198,6 +212,12 @@
     if (this.saveTimer > 30) { this.saveTimer = 0; this.save(); }
 
     input.endFrame();
+  };
+
+  Game.prototype.setCursorHidden = function (hide) {
+    if (this._cursorHidden === hide) return;
+    this._cursorHidden = hide;
+    this.canvas.style.cursor = hide ? 'none' : '';
   };
 
   Game.prototype.updateWeather = function (dt) {
@@ -1056,6 +1076,8 @@
   };
   Game.prototype.openScreen = function (s) {
     this.screen = s;
+    this.input.virtual = false;
+    this.setCursorHidden(false);
     this.input.exitLock();
     this.audio.play('open', 0.2);
     this.ui.showScreen(s);

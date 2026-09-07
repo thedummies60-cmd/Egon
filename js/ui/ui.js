@@ -267,6 +267,8 @@
     if (this.game.panorama) return;
     if (this.game.player && this.game.player.dead) return;
     this.game.paused = true;
+    this.game.input.virtual = false;
+    this.game.setCursorHidden(false);
     this.game.input.exitLock();
     this.game.save();
     this.show('screen-pause');
@@ -282,6 +284,8 @@
     this.hideScreen();
     this.deathShown = false;
     this.setHud(false);
+    g.input.virtual = false;
+    g.setCursorHidden(false);
     g.input.exitLock();
     if (g.startPanorama) g.startPanorama();
     this.show('screen-title');
@@ -297,6 +301,8 @@
 
   UI.prototype.showDeath = function () {
     this.deathShown = true;
+    this.game.input.virtual = false;
+    this.game.setCursorHidden(false);
     const src = this.game.player.lastDamageSource;
     const causes = {
       fall: 'You fell from a high place', drown: 'You drowned', lava: 'You tried to swim in lava',
