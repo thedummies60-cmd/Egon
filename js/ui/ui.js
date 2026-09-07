@@ -444,6 +444,30 @@
       body.appendChild(row);
     }
 
+    function choice(label, key, values, labels, onSet) {
+      const row = document.createElement('div');
+      row.className = 'opt-row';
+      const bt = document.createElement('button');
+      bt.className = 'btn small val';
+      function refresh() { bt.textContent = label + ': ' + labels[values.indexOf(s[key])]; }
+      bt.onclick = function () {
+        s[key] = values[(values.indexOf(s[key]) + 1) % values.length];
+        refresh();
+        self.click();
+        if (onSet) onSet(s[key]);
+      };
+      refresh();
+      row.appendChild(bt);
+      body.appendChild(row);
+    }
+
+    choice('Mouse', 'mouseMode', ['lock', 'drag'], ['Capture cursor', 'Drag to look'],
+      function (v) {
+        self.game.input.setMouseMode(v);
+        self.toast(v === 'lock'
+          ? 'Mouse will be captured - press Esc to release it'
+          : 'Hold the mouse button and move to look around');
+      });
     slider('Render Distance', 'renderDistance', 3, 16, 1, function (v) { return v + ' chunks'; });
     slider('Field of View', 'fov', 50, 110, 1, function (v) { return v + '°'; });
     slider('Mouse Sensitivity', 'sensitivity', 0.2, 3, 0.05, function (v) { return Math.round(v * 100) + '%'; });
@@ -455,7 +479,8 @@
     const note = document.createElement('div');
     note.className = 'label';
     note.style.marginTop = '10px';
-    note.textContent = 'Lower the render distance if the game feels slow.';
+    note.textContent = 'Press Esc at any time to release the mouse. ' +
+      'Lower the render distance if the game feels slow.';
     body.appendChild(note);
     this.show('screen-options');
   };

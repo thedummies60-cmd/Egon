@@ -96,6 +96,10 @@
     // Losing pointer lock means the player alt-tabbed or hit Esc, so pause.
     // The title-screen panorama never holds lock, so it must not trigger this.
     game.input.onLockChange = function (locked) {
+      if (locked && !ui.escHintShown) {
+        ui.escHintShown = true;
+        ui.toast('Mouse captured - press Esc to release it');
+      }
       if (!locked && game.running && !game.panorama && !game.paused &&
           !game.screen && !game.player.dead) {
         ui.pause();
@@ -113,6 +117,7 @@
     });
 
     /* --- title screen with a live world behind it --- */
+    game.input.setMouseMode(game.settings.mouseMode);
     ui.show('screen-title');
     ui.setHud(false);
     game.startPanorama();

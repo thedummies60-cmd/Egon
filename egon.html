@@ -4036,6 +4036,9 @@ kbd {
     this.mouse = { dx: 0, dy: 0, left: false, right: false, middle: false, wheel: 0 };
     this.locked = false;
     this.lockBlocked = false;   // pointer lock refused (common inside an iframe)
+    this.everLocked = false;    // it worked at least once, so it isn't blocked
+    this.lockRetries = 0;
+    this.forceDrag = false;     // user chose drag-to-look in Options
     this.dragging = false;
     this.dragDist = 0;
     this.sensitivity = 0.0022;
@@ -4070,7 +4073,11 @@ kbd {
 
     document.addEventListener('pointerlockchange', function () {
       self.locked = document.pointerLockElement === self.canvas;
-      if (self.locked) self.lockBlocked = false;
+      if (self.locked) {
+        self.lockBlocked = false;
+        self.everLocked = true;
+        self.lockRetries = 0;
+      }
       if (!self.locked) { self.mouse.left = false; self.mouse.right = false; self.dragging = false; }
       if (self.onLockChange) self.onLockChange(self.locked);
     });
@@ -4119,16 +4126,41 @@ kbd {
 
   Input.prototype.requestLock = function () {
     const self = this;
+    if (this.forceDrag) { this.lockBlocked = true; return; }
+    if (this.locked) return;
     if (!this.canvas.requestPointerLock) { this.markLockBlocked(); return; }
     let r;
     try { r = this.canvas.requestPointerLock(); }
-    catch (e) { this.markLockBlocked(); return; }
-    // Chrome returns a promise that rejects when the frame disallows it.
-    if (r && typeof r.catch === 'function') r.catch(function () { self.markLockBlocked(); });
+    catch (e) { this.lockFailed(); return; }
+    // Chrome returns a promise that rejects when the request is refused.
+    if (r && typeof r.catch === 'function') r.catch(function () { self.lockFailed(); });
     // Some browsers just do nothing at all, so check whether it took.
-    setTimeout(function () {
-      if (!self.locked && document.pointerLockElement !== self.canvas) self.markLockBlocked();
-    }, 400);
+    clearTimeout(this._lockCheck);
+    this._lockCheck = setTimeout(function () {
+      if (!self.locked && document.pointerLockElement !== self.canvas) self.lockFailed();
+    }, 500);
+  };
+
+  /* A refusal is not proof that pointer lock is unavailable. Browsers block
+   * re-locking for about a second after the user pressed Esc to escape it, so
+   * a failure after lock has ever worked is a cooldown: wait and try again,
+   * rather than falling back to drag-to-look for the rest of the session. */
+  Input.prototype.lockFailed = function () {
+    if (this.locked || this.forceDrag) return;
+    if (this.everLocked && this.lockRetries < 4) {
+      this.lockRetries++;
+      const self = this;
+      clearTimeout(this._retryLock);
+      this._retryLock = setTimeout(function () { self.requestLock(); }, 1150);
+      return;
+    }
+    this.markLockBlocked();
+  };
+
+  Input.prototype.cancelLockRetry = function () {
+    clearTimeout(this._retryLock);
+    clearTimeout(this._lockCheck);
+    this.lockRetries = 0;
   };
 
   Input.prototype.markLockBlocked = function () {
@@ -4136,8 +4168,24 @@ kbd {
     this.lockBlocked = true;
     if (this.onLockBlocked) this.onLockBlocked();
   };
+
   Input.prototype.exitLock = function () {
+    // Stop any pending retry, or it would grab the mouse back while the
+    // player is sitting in a menu.
+    this.cancelLockRetry();
     if (document.exitPointerLock) document.exitPointerLock();
+  };
+
+  // Options toggle: 'lock' captures the cursor, 'drag' never does.
+  Input.prototype.setMouseMode = function (mode) {
+    this.forceDrag = (mode === 'drag');
+    if (this.forceDrag) {
+      this.lockBlocked = true;
+      this.exitLock();
+    } else {
+      this.lockBlocked = false;
+      this.dragging = false;
+    }
   };
 
   Input.prototype.down = function (action) {
@@ -8140,7 +8188,8 @@ kbd {
       volume: 0.7,
       smoothLighting: true,
       viewBob: true,
-      showFps: false
+      showFps: false,
+      mouseMode: 'lock'      // 'lock' captures the cursor, 'drag' does not
     };
     this.running = false;
     this.paused = false;
@@ -10180,6 +10229,30 @@ kbd {
       body.appendChild(row);
     }
 
+    function choice(label, key, values, labels, onSet) {
+      const row = document.createElement('div');
+      row.className = 'opt-row';
+      const bt = document.createElement('button');
+      bt.className = 'btn small val';
+      function refresh() { bt.textContent = label + ': ' + labels[values.indexOf(s[key])]; }
+      bt.onclick = function () {
+        s[key] = values[(values.indexOf(s[key]) + 1) % values.length];
+        refresh();
+        self.click();
+        if (onSet) onSet(s[key]);
+      };
+      refresh();
+      row.appendChild(bt);
+      body.appendChild(row);
+    }
+
+    choice('Mouse', 'mouseMode', ['lock', 'drag'], ['Capture cursor', 'Drag to look'],
+      function (v) {
+        self.game.input.setMouseMode(v);
+        self.toast(v === 'lock'
+          ? 'Mouse will be captured - press Esc to release it'
+          : 'Hold the mouse button and move to look around');
+      });
     slider('Render Distance', 'renderDistance', 3, 16, 1, function (v) { return v + ' chunks'; });
     slider('Field of View', 'fov', 50, 110, 1, function (v) { return v + '°'; });
     slider('Mouse Sensitivity', 'sensitivity', 0.2, 3, 0.05, function (v) { return Math.round(v * 100) + '%'; });
@@ -10191,7 +10264,8 @@ kbd {
     const note = document.createElement('div');
     note.className = 'label';
     note.style.marginTop = '10px';
-    note.textContent = 'Lower the render distance if the game feels slow.';
+    note.textContent = 'Press Esc at any time to release the mouse. ' +
+      'Lower the render distance if the game feels slow.';
     body.appendChild(note);
     this.show('screen-options');
   };
@@ -10920,6 +10994,10 @@ kbd {
     // Losing pointer lock means the player alt-tabbed or hit Esc, so pause.
     // The title-screen panorama never holds lock, so it must not trigger this.
     game.input.onLockChange = function (locked) {
+      if (locked && !ui.escHintShown) {
+        ui.escHintShown = true;
+        ui.toast('Mouse captured - press Esc to release it');
+      }
       if (!locked && game.running && !game.panorama && !game.paused &&
           !game.screen && !game.player.dead) {
         ui.pause();
@@ -10937,6 +11015,7 @@ kbd {
     });
 
     /* --- title screen with a live world behind it --- */
+    game.input.setMouseMode(game.settings.mouseMode);
     ui.show('screen-title');
     ui.setHud(false);
     game.startPanorama();

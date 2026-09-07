@@ -37,9 +37,13 @@ node build.js out.html --body   # body-only, for hosts with their own skeleton
 
 ### Mouse look
 
-The game grabs the pointer so the mouse turns the camera. Where that is not
-allowed — inside a sandboxed iframe, for instance — it falls back to
-drag-to-look: hold the button and move to turn, hold still to keep mining.
+The game captures the cursor so the mouse turns the camera. **Press Esc to
+release it** — that also opens the pause menu.
+
+Where capturing is not allowed — inside a sandboxed iframe, for instance — the
+game falls back to drag-to-look: hold the button and move to turn, hold still
+to keep mining. You can also pick that mode yourself under **Options → Mouse**
+if you would rather keep your cursor.
 
 ## Controls
 

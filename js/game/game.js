@@ -24,7 +24,8 @@
       volume: 0.7,
       smoothLighting: true,
       viewBob: true,
-      showFps: false
+      showFps: false,
+      mouseMode: 'lock'      // 'lock' captures the cursor, 'drag' does not
     };
     this.running = false;
     this.paused = false;

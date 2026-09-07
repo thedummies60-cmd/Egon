@@ -30,6 +30,9 @@
     this.mouse = { dx: 0, dy: 0, left: false, right: false, middle: false, wheel: 0 };
     this.locked = false;
     this.lockBlocked = false;   // pointer lock refused (common inside an iframe)
+    this.everLocked = false;    // it worked at least once, so it isn't blocked
+    this.lockRetries = 0;
+    this.forceDrag = false;     // user chose drag-to-look in Options
     this.dragging = false;
     this.dragDist = 0;
     this.sensitivity = 0.0022;
@@ -64,7 +67,11 @@
 
     document.addEventListener('pointerlockchange', function () {
       self.locked = document.pointerLockElement === self.canvas;
-      if (self.locked) self.lockBlocked = false;
+      if (self.locked) {
+        self.lockBlocked = false;
+        self.everLocked = true;
+        self.lockRetries = 0;
+      }
       if (!self.locked) { self.mouse.left = false; self.mouse.right = false; self.dragging = false; }
       if (self.onLockChange) self.onLockChange(self.locked);
     });
@@ -113,16 +120,41 @@
 
   Input.prototype.requestLock = function () {
     const self = this;
+    if (this.forceDrag) { this.lockBlocked = true; return; }
+    if (this.locked) return;
     if (!this.canvas.requestPointerLock) { this.markLockBlocked(); return; }
     let r;
     try { r = this.canvas.requestPointerLock(); }
-    catch (e) { this.markLockBlocked(); return; }
-    // Chrome returns a promise that rejects when the frame disallows it.
-    if (r && typeof r.catch === 'function') r.catch(function () { self.markLockBlocked(); });
+    catch (e) { this.lockFailed(); return; }
+    // Chrome returns a promise that rejects when the request is refused.
+    if (r && typeof r.catch === 'function') r.catch(function () { self.lockFailed(); });
     // Some browsers just do nothing at all, so check whether it took.
-    setTimeout(function () {
-      if (!self.locked && document.pointerLockElement !== self.canvas) self.markLockBlocked();
-    }, 400);
+    clearTimeout(this._lockCheck);
+    this._lockCheck = setTimeout(function () {
+      if (!self.locked && document.pointerLockElement !== self.canvas) self.lockFailed();
+    }, 500);
+  };
+
+  /* A refusal is not proof that pointer lock is unavailable. Browsers block
+   * re-locking for about a second after the user pressed Esc to escape it, so
+   * a failure after lock has ever worked is a cooldown: wait and try again,
+   * rather than falling back to drag-to-look for the rest of the session. */
+  Input.prototype.lockFailed = function () {
+    if (this.locked || this.forceDrag) return;
+    if (this.everLocked && this.lockRetries < 4) {
+      this.lockRetries++;
+      const self = this;
+      clearTimeout(this._retryLock);
+      this._retryLock = setTimeout(function () { self.requestLock(); }, 1150);
+      return;
+    }
+    this.markLockBlocked();
+  };
+
+  Input.prototype.cancelLockRetry = function () {
+    clearTimeout(this._retryLock);
+    clearTimeout(this._lockCheck);
+    this.lockRetries = 0;
   };
 
   Input.prototype.markLockBlocked = function () {
@@ -130,8 +162,24 @@
     this.lockBlocked = true;
     if (this.onLockBlocked) this.onLockBlocked();
   };
+
   Input.prototype.exitLock = function () {
+    // Stop any pending retry, or it would grab the mouse back while the
+    // player is sitting in a menu.
+    this.cancelLockRetry();
     if (document.exitPointerLock) document.exitPointerLock();
+  };
+
+  // Options toggle: 'lock' captures the cursor, 'drag' never does.
+  Input.prototype.setMouseMode = function (mode) {
+    this.forceDrag = (mode === 'drag');
+    if (this.forceDrag) {
+      this.lockBlocked = true;
+      this.exitLock();
+    } else {
+      this.lockBlocked = false;
+      this.dragging = false;
+    }
   };
 
   Input.prototype.down = function (action) {
